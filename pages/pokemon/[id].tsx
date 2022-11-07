@@ -115,22 +115,40 @@ export const getStaticPaths: GetStaticPaths = async (ctx) => {
     paths: pokemons151.map((id) => ({
       params: { id },
     })),
-    fallback: false,
+    // fallback: false, // Si la pagina no existe entonces 404
+    fallback: "blocking", // Si la pagina no existe entonces espera a que se genere
   };
 };
 
 export const getStaticProps: GetStaticProps = async ({ params }) => {
   const { id } = params as { id: string };
 
-  const { data } = await pokeAPI.get<Pokemon>(`/pokemon/${id}`);
+  let pokemonData;
+
+  try {
+    const { data } = await pokeAPI.get<Pokemon>(`/pokemon/${id}`);
+    pokemonData = data;
+  } catch (error) {
+    pokemonData = null;
+  }
+
+  if (!pokemonData) {
+    return {
+      redirect: {
+        destination: "/",
+        permanent: false,
+      },
+    };
+  }
 
   return {
     props: {
       pokemon: {
-        id: data.id,
-        name: data.name,
-        sprites: data.sprites,
+        id: pokemonData.id,
+        name: pokemonData.name,
+        sprites: pokemonData.sprites,
       },
+      revalidate: 86400, // 24 hours
     },
   };
 };
